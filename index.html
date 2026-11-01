@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Une surprise t’attend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#dfe6ff; --ink:#1c1f4f; --pink:#ff4f8b; --sun:#ffd84d; --white:#fffdf8;
+  --display:'Bagel Fat One','Arial Rounded MT Bold','Trebuchet MS',sans-serif;
+  --text:'Figtree','Segoe UI',system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{min-height:100%;background:var(--bg)}
+body{margin:0;min-height:100vh;font-family:var(--text);color:var(--ink);background:var(--bg);transition:background .8s;overflow-x:hidden}
+body.reveal{background:var(--pink)}
+main{position:relative;z-index:2;max-width:640px;margin:0 auto;padding:36px 20px 56px}
+h1{font:400 clamp(2.2rem,9vw,3.6rem)/1.05 var(--display);margin:0 0 8px;letter-spacing:.01em}
+.sub{margin:0 0 28px;font-size:1.05rem;line-height:1.5;max-width:34ch}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{padding:18px 16px 14px;border-radius:28px 28px 28px 8px;display:flex;flex-direction:column}
+.tile:nth-child(2){border-radius:28px 8px 28px 28px}
+.tile:nth-child(3){border-radius:8px 28px 28px 28px}
+.tile:nth-child(4){border-radius:28px 28px 8px 28px}
+.tile b{font:400 clamp(3.4rem,17vw,5.6rem)/1 var(--display);font-variant-numeric:tabular-nums}
+.tile span{font-weight:600;font-size:1rem}
+.t1{background:var(--pink);color:var(--white)}
+.t2{background:var(--sun)}
+.t3{background:var(--ink);color:var(--white)}
+.t4{background:var(--white)}
+h2{font:400 1.5rem/1.1 var(--display);margin:40px 0 14px}
+.hints{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.hint{position:relative;background:var(--white);padding:14px 18px 14px 22px;border-radius:18px;border-left:8px solid var(--pink);line-height:1.45}
+.hint.locked{background:transparent;border:2px dashed var(--ink);border-left-width:2px;opacity:.7}
+.hint small{display:block;font-weight:600;opacity:.75;margin-top:2px}
+#final{display:none;text-align:center;padding-top:12vh}
+body.reveal #wait{display:none}
+body.reveal #final{display:block}
+#final h1{color:var(--white);font-size:clamp(2.6rem,12vw,4.6rem)}
+#final p{color:var(--white);font-size:1.2rem;line-height:1.5;margin:16px auto 0;max-width:30ch;font-weight:600}
+.card{background:var(--white);color:var(--ink);border-radius:28px;padding:22px 20px;margin-top:28px}
+.card strong{font:400 1.6rem/1.1 var(--display);display:block}
+#field{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.fl{position:absolute;width:var(--s);height:var(--s);transform:scale(0) rotate(-40deg);opacity:0}
+.reveal .fl{animation:bloom 1.1s cubic-bezier(.2,1.4,.4,1) var(--d) forwards,sway 4s ease-in-out calc(var(--d) + 1.2s) infinite alternate}
+@keyframes bloom{to{transform:scale(1) rotate(0);opacity:1}}
+@keyframes sway{from{transform:scale(1) rotate(-6deg)}to{transform:scale(1) rotate(6deg)}}
+@media (prefers-reduced-motion:reduce){
+  .reveal .fl{animation:none;transform:none;opacity:1}
+  body{transition:none}
+}
+</style>
+</head>
+<body>
+
+<div id="field" aria-hidden="true"></div>
+
+<main>
+  <section id="wait">
+    <h1>Une surprise t’attend.</h1>
+    <p class="sub">Je ne dis rien. Mais le temps passe, et quelque chose se prépare rien que pour toi.</p>
+
+    <div class="tiles" role="timer" aria-live="off">
+      <div class="tile t1"><b id="j">00</b><span>jours</span></div>
+      <div class="tile t2"><b id="h">00</b><span>heures</span></div>
+      <div class="tile t3"><b id="m">00</b><span>minutes</span></div>
+      <div class="tile t4"><b id="s">00</b><span>secondes</span></div>
+    </div>
+
+    <h2>Quelques indices</h2>
+    <ul class="hints" id="hints"></ul>
+  </section>
+
+  <section id="final">
+    <h1 id="fTitre"></h1>
+    <p id="fTexte"></p>
+    <div class="card">
+      <strong id="fLieu"></strong>
+      <span id="fQuand"></span>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ============ À MODIFIER ============ */
+const CONFIG = {
+  date: "2026-11-14T14:00:00",           // date et heure de l’activité (heure locale, format AAAA-MM-JJTHH:MM:SS)
+  titre: "On part cueillir des fleurs !",
+  texte: "Un champ entier de fleurs, rien que pour nous. Prépare-toi, c’est aujourd’hui.",
+  lieu: "Beflower",                       // lieu affiché à la révélation
+  indices: [                              // "avant" = temps restant avant l’activité pour débloquer l’indice
+    { avant: {jours: 7},  texte: "Ça se passe dehors. Regarde la météo." },
+    { avant: {jours: 3},  texte: "Prévois des vêtements et des chaussures qui peuvent se salir un peu." },
+    { avant: {jours: 2},  texte: "Ce sera coloré, et ça sentira très bon." },
+    { avant: {jours: 1},  texte: "Charge ton téléphone : tu voudras des photos." }
+  ]
+};
+/* ================================== */
+
+const $ = id => document.getElementById(id);
+const target = new Date(CONFIG.date).getTime();
+const test = new URLSearchParams(location.search).get("test");   // ?test=reveal pour tester la révélation
+const pad = n => String(n).padStart(2, "0");
+const toMs = o => ((o.jours||0)*86400 + (o.heures||0)*3600 + (o.minutes||0)*60) * 1000;
+
+/* indices */
+const hintEls = CONFIG.indices.map(ind => {
+  const li = document.createElement("li");
+  li.className = "hint locked";
+  $("hints").appendChild(li);
+  return {li, ind};
+});
+
+function label(o){
+  if(o.jours) return o.jours + (o.jours>1 ? " jours" : " jour");
+  if(o.heures) return o.heures + (o.heures>1 ? " heures" : " heure");
+  return (o.minutes||0) + " min";
+}
+function renderHints(left){
+  hintEls.forEach(({li, ind}) => {
+    const open = left <= toMs(ind.avant);
+    li.className = "hint" + (open ? "" : " locked");
+    li.innerHTML = open
+      ? ind.texte
+      : "Indice verrouillé<small>Il s’ouvre " + label(ind.avant) + " avant</small>";
+  });
+}
+
+/* fleurs de la révélation */
+const COLS = ["#fffdf8","#ffd84d","#1c1f4f","#ff9ec0","#b9a8ff","#ffb347"];
+function flower(c, centre){
+  let p = "";
+  for(let a=0;a<360;a+=45) p += `<ellipse cx="0" cy="-23" rx="11" ry="20" fill="${c}" transform="rotate(${a})"/>`;
+  return `<svg viewBox="-50 -50 100 100">${p}<circle r="12" fill="${centre}"/></svg>`;
+}
+function plant(){
+  const f = $("field");
+  for(let i=0;i<30;i++){
+    const d = document.createElement("div");
+    const c = COLS[i % COLS.length];
+    d.className = "fl";
+    d.style.cssText = `left:${Math.random()*92}%;top:${Math.random()*92}%;--s:${46+Math.random()*70}px;--d:${(Math.random()*1.6).toFixed(2)}s`;
+    d.innerHTML = flower(c, c === "#ffd84d" ? "#ff4f8b" : "#ffd84d");
+    f.appendChild(d);
+  }
+}
+
+let done = false;
+function finish(){
+  if(done) return;
+  done = true;
+  $("fTitre").textContent = CONFIG.titre;
+  $("fTexte").textContent = CONFIG.texte;
+  $("fLieu").textContent = CONFIG.lieu;
+  $("fQuand").textContent = new Date(CONFIG.date).toLocaleString("fr-BE", {weekday:"long", day:"numeric", month:"long", hour:"2-digit", minute:"2-digit"});
+  document.title = "C’est aujourd’hui !";
+  plant();
+  document.body.classList.add("reveal");
+}
+
+function tick(){
+  const left = test === "reveal" ? 0 : target - Date.now();
+  if(left <= 0){ finish(); return; }
+  const t = Math.floor(left/1000);
+  $("j").textContent = pad(Math.floor(t/86400));
+  $("h").textContent = pad(Math.floor(t%86400/3600));
+  $("m").textContent = pad(Math.floor(t%3600/60));
+  $("s").textContent = pad(t%60);
+  renderHints(left);
+}
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
